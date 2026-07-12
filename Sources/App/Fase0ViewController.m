@@ -40,7 +40,16 @@ static UIColor *CorAmbar(void)   { return [UIColor colorWithRed:0.98 green:0.72 
                                        fonte:[UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightRegular]
                                          cor:(dlopenOk ? CorFosforo() : CorAmbar())];
 
-    UIStackView *pilha = [[UIStackView alloc] initWithArrangedSubviews:@[titulo, subtitulo, rotuloVersao, resultado, veredito]];
+    UIButton *voltar = [UIButton buttonWithType:UIButtonTypeSystem];
+    [voltar setAttributedTitle:[[NSAttributedString alloc] initWithString:@"VOLTAR" attributes:@{
+        NSFontAttributeName: [UIFont monospacedSystemFontOfSize:14 weight:UIFontWeightSemibold],
+        NSForegroundColorAttributeName: [UIColor colorWithWhite:0.62 alpha:1.0],
+        NSKernAttributeName: @2,
+    }] forState:UIControlStateNormal];
+    [voltar addTarget:self action:@selector(voltar) forControlEvents:UIControlEventTouchUpInside];
+    voltar.hidden = (self.navigationController == nil);
+
+    UIStackView *pilha = [[UIStackView alloc] initWithArrangedSubviews:@[titulo, subtitulo, rotuloVersao, resultado, veredito, voltar]];
     pilha.axis = UILayoutConstraintAxisVertical;
     pilha.alignment = UIStackViewAlignmentCenter;
     pilha.spacing = 14;
@@ -54,6 +63,10 @@ static UIColor *CorAmbar(void)   { return [UIColor colorWithRed:0.98 green:0.72 
         [pilha.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:24],
         [pilha.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor constant:-24],
     ]];
+}
+
+- (void)voltar {
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 // Tenta carregar Frameworks/libdummy.dylib e chamar fase0_mensagem().

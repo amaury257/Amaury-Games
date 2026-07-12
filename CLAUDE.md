@@ -6,13 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado do repositório
 
-**Fase 0 (gate de toolchain) em andamento.** O scaffold Theos, o app "Olá" (ObjC) com teste de dlopen e os scripts do gate estão prontos; falta o usuário rodar `scripts/fase0-gate.sh` no WSL2, instalar o `.ipa` via AltStore e reportar os resultados — isso fecha os ADRs 0001 (D3) e 0002 (D7) e libera a Fase 1. A fonte de verdade completa do projeto é **`docs/prompt-mestre.md`** (Prompt Mestre v2.0) — leia-o antes de qualquer decisão estrutural. Este CLAUDE.md destila o essencial; em caso de dúvida ou conflito, o prompt mestre prevalece. **Nada de features antes de a Fase 0 fechar.**
+**Fase 1 implementada em código; validação no aparelho pendente.** Estratégia acordada com o usuário: desenvolver adiantado neste ambiente (sem Theos) e validar depois no WSL2 + iPhone via AltStore. Consequências práticas:
+
+- **D7 decidido: ObjC/UIKit + C** (ADR 0002) — único caminho garantido no Theos sem o probe Swift. Não escrever Swift.
+- O **gate da Fase 0 nunca rodou** (`scripts/fase0-gate.sh`): D3 (dlopen pós-reassinatura) segue sem veredito — o app inclui a tela Diagnóstico que mostra esse teste. Antes da Fase 3 (cores libretro), D3 PRECISA estar confirmado.
+- O jogo (motor C + Core + Shell) está completo conforme §7, com testes verdes no host; falta o smoke test real (60 fps, áudio, modo avião) no iPhone.
+
+A fonte de verdade completa do projeto é **`docs/prompt-mestre.md`** (Prompt Mestre v2.0) — leia-o antes de qualquer decisão estrutural. Este CLAUDE.md destila o essencial; em caso de dúvida ou conflito, o prompt mestre prevalece (exceto onde um ADR registrou desvio consciente).
 
 Respostas do §15 (já coletadas do usuário — não perguntar de novo):
 1. SDK iOS: desconhecido — o gate detecta (`Makefile` usa `latest`); resultado vai para `docs/fase0-resultados.md`.
-2. Toolchain Swift: desconhecida — `scripts/probe-swift.sh` testa empiricamente (D7).
+2. Toolchain Swift: irrelevante agora — D7 fixado em ObjC (ADR 0002).
 3. iPhone: **iPhone 14** (tela 60 Hz, sem ProMotion; Core Haptics disponível).
-4. Manche virtual: **flutuante** (aparece onde tocar).
+4. Manche virtual: **flutuante** (aparece onde tocar) — implementado no InputHub.
 
 Campos preenchidos: bundle ID `com.amaury.riverraid`; nome de exibição "River Raid".
 
@@ -43,7 +49,7 @@ Não reabrir sem novo ADR; justificativas completas no §5 do prompt mestre:
 - **D4** — Vídeo: **Metal** (CAMetalLayer + CADisplayLink), textura por frame via `replaceRegion`, nearest sampling, escala inteira.
 - **D5** — Áudio: **`AVAudioSourceNode`** (pull) + ring buffer + controle dinâmico de taxa (±0,5% conforme preenchimento, alvo ~64 ms) para eliminar estalos.
 - **D6** — Mapa do River Raid: **LFSR Fibonacci de 16 bits**, taps [16, 14, 13, 11], seed `0xACE1` no modo Clássico. Mesmo seed ⇒ mesmo mundo; testável por golden test.
-- **D7** — **Swift 6 preferencial; decisão final na Fase 0.** Se compilar Swift→iOS pelo Theos/Linux falhar (não insistir mais de 1 sessão), o app inteiro é ObjC/UIKit + C++ e a decisão vira ADR.
+- **D7** — **DECIDIDO: ObjC/UIKit + C** (ADR 0002). O motor do jogo é C puro em `Sources/Game/engine/` (portável, determinístico, testável no host); a UI e a infra são ObjC/ARC. Não escrever Swift.
 - **D8** — Ponte com cores em Objective-C++ (`LibretroCore.mm`).
 
 ## Arquitetura-alvo
@@ -71,12 +77,13 @@ RiverRaid/
 └── docs/                     # build.md, cores.md, arquitetura.md, controles.md, adr/, CHANGELOG.md
 ```
 
-Constantes de gameplay centralizadas em `GameTuning.swift` (defaults tunáveis). Layout de dados do emulador: `Documents/roms/<sistema>/` e `Documents/saves/<sistema>/<sha1-da-rom>/` — identidade de ROM por SHA-1.
+Constantes de gameplay centralizadas em `Sources/Game/engine/rr_tuning.h` (defaults tunáveis; o §10 citava `GameTuning.swift`, ajustado pelo D7). Detalhes de implementação da Fase 1 em `docs/arquitetura.md`. Layout de dados do emulador: `Documents/roms/<sistema>/` e `Documents/saves/<sistema>/<sha1-da-rom>/` — identidade de ROM por SHA-1.
 
 ## Build e deploy
 
 **Importante:** o build só fecha no WSL2 do usuário (Theos + SDK iOS). Ambientes remotos/CI sem Theos não compilam o app — neste caso, valide o que der (ex.: `bash -n` nos scripts) e descreva o smoke test para o usuário rodar.
 
+- **Testes do motor (rodam em qualquer host, sem Theos): `./scripts/rodar-testes.sh`** — golden LFSR/mapa, combustível, colisão, vida extra, save state, recordes. Rodar sempre que tocar em `Sources/Game/engine/`.
 - Gate completo da Fase 0: `./scripts/fase0-gate.sh` (verifica Theos/SDK, probe Swift, build, `.ipa`, grava `docs/fase0-resultados.md`).
 - Build manual: `make package FINALPACKAGE=1` → `./scripts/package-ipa.sh` gera `build/RiverRaid.ipa`.
 - Makefile: template **application** do Theos; `TARGET := iphone:clang:latest:26.0`; `ARCHS := arm64`. O Info.plist vive em `Resources/Info.plist` (convenção do Theos; o §10 citava `RiverRaid.plist` na raiz). Frameworks adicionais (Metal, MetalKit, AVFoundation, GameController, CoreHaptics) entram nas fases seguintes.
@@ -102,14 +109,14 @@ Executar em ordem; **nunca deixar o build quebrado entre fases** — cada fase t
 - **Commits pt-BR** no padrão `feat:/fix:/docs:/refactor:`.
 - **Planejar antes de codar**: produza o plano da fase corrente, execute, só então avance.
 - Manter **`docs/CHANGELOG.md`** (pt-BR) e **ADRs curtos em `docs/adr/`** para toda decisão estrutural.
-- Swift moderno tipado (ou ObjC disciplinado, conforme D7); zero force-unwrap em fluxo crítico; erros via `throws`/`Result`.
+- ObjC disciplinado (D7/ADR 0002): ARC em tudo, nil-checks em fluxo crítico, erros via `NSError`; motor em C99 sem alocação dinâmica no caminho do frame.
 - Log JSON estruturado em arquivo rotacionado no sandbox (`{ts, nivel, modulo, evento, dados}`), nunca rede.
 - **UI "CRT-noir" premium obrigatória em todas as telas** (§9): tipografia própria, nada de SF System puro, nada com "cara de protótipo". Acessibilidade: contraste AA, alvos ≥ 44 pt, Dynamic Type.
 - Detalhes de gameplay (pontuação canônica, combustível, pontes-checkpoint, vidas, áudio TIA sintetizado) estão no §7 do prompt mestre — segui-lo à risca no modo Clássico; extras modernos apenas como toggles desligados por padrão.
 
 ## Testes obrigatórios
 
-Ainda não existe harness de testes (será definido na Fase 0/1 conforme D7). Os testes exigidos pela spec (§7.13 e §12):
+Harness: `tests/testes.c` compilado pelo host (`./scripts/rodar-testes.sh`) — o motor é C puro, então os testes do jogo não dependem de Theos nem de aparelho. Cobertos hoje (§7.13 e §12):
 
 - **Golden test do LFSR/mapa**: mesma seed ⇒ sequência de peças byte-idêntica.
 - Colisão AABB (casos de borda em margens e ilhas).

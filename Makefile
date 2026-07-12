@@ -11,9 +11,14 @@ include $(THEOS)/makefiles/common.mk
 
 APPLICATION_NAME = RiverRaid
 
-RiverRaid_FILES = $(wildcard Sources/App/*.m)
-RiverRaid_FRAMEWORKS = UIKit
-RiverRaid_CFLAGS = -fobjc-arc -Wall
+RiverRaid_FILES = $(wildcard Sources/App/*.m) \
+                  $(wildcard Sources/Core/*.m) \
+                  $(wildcard Sources/Game/*.m) \
+                  $(wildcard Sources/Shell/*.m) \
+                  $(wildcard Sources/Game/engine/*.c)
+RiverRaid_FRAMEWORKS = UIKit QuartzCore Metal AVFoundation GameController CoreHaptics
+RiverRaid_CFLAGS = -fobjc-arc -Wall -O2 \
+                   -ISources/App -ISources/Core -ISources/Game -ISources/Game/engine -ISources/Shell
 
 include $(THEOS)/makefiles/application.mk
 

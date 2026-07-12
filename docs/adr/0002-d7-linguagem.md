@@ -1,31 +1,32 @@
 # ADR 0002 — D7: Linguagem principal do app
 
-- **Status:** Proposto — aguardando probe da Fase 0 no WSL2.
-- **Data:** 2026-07-12
+- **Status:** **Aceito — Objective-C/UIKit + C.**
+- **Data da decisão:** 2026-07-12
 
 ## Contexto
 
-Preferência da spec: Swift 6. Porém o build fecha por Theos no Linux (WSL2),
-e compilar Swift→iOS a partir do Linux exige toolchain específica que pode
-não estar disponível ou não funcionar com o SDK instalado. A spec proíbe
-insistir mais de uma sessão nisso.
+Preferência original da spec: Swift 6, com decisão empírica na Fase 0 (probe
+de compilação Swift→iOS pelo Theos/Linux). O usuário, porém, optou por
+**desenvolver o app inteiro antes de rodar o gate** no WSL2 dele, validando
+depois no aparelho. Sem o resultado do probe, escrever o app em Swift seria
+apostar todo o código numa toolchain não verificada.
 
-## Decisão (proposta)
+## Decisão
 
-- `scripts/probe-swift.sh` tenta compilar um `hello.swift` para
-  `arm64-apple-ios26.0` com a toolchain do Theos (ou `swiftc` do PATH).
-- **Probe OK** ⇒ D7 = **Swift 6** (UI SwiftUI/UIKit conforme a fase);
-  status vira **Aceito (Swift)**.
-- **Probe falha** ⇒ D7 = **ObjC/UIKit + C++** para todo o app;
-  status vira **Aceito (ObjC)**.
+**D7 = Objective-C/UIKit para todo o app**, com o motor do jogo em **C puro**
+(`Sources/Game/engine/`) — portável, determinístico e testável em qualquer
+host (os testes do §7.13 rodam no Linux via `scripts/rodar-testes.sh`).
+A ponte com os cores libretro segue em Objective-C++ (D8), como planejado.
 
-Em ambos os casos a ponte com os cores segue em Objective-C++ (D8), e o app
-"Olá" da Fase 0 permanece ObjC — é o caminho garantido para validar o gate
-independentemente do resultado.
+É o único caminho que garante build no Theos/Linux independentemente do
+resultado do probe Swift (`scripts/probe-swift.sh`, que permanece no gate a
+título informativo). A spec sempre tratou ObjC como plenamente viável.
 
 ## Consequências
 
-- Swift: código de jogo/UI em Swift tipado, interop com `LibretroCore.mm`
-  via header bridging do Theos.
-- ObjC: disciplina extra (nullability, generics leves, ARC); nenhuma perda
-  funcional — todo o produto é viável em ObjC.
+- Zero risco de toolchain: clang do Theos compila ObjC e C nativamente.
+- Disciplina exigida no ObjC: ARC em todo o app, sem force-unwrap equivalente
+  (nil-checks em fluxo crítico), erros via NSError.
+- O motor em C dá de graça o determinismo exigido pelo §7.2 e os golden tests.
+- Migração futura a Swift é possível módulo a módulo (a fronteira é o
+  protocolo `GameSession`), mas não está planejada.

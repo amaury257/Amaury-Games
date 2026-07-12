@@ -1,11 +1,14 @@
 #import "AppDelegate.h"
-#import "Fase0ViewController.h"
+#import "HomeViewController.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
-    self.window.rootViewController = [[Fase0ViewController alloc] init];
+    UINavigationController *nav = [[UINavigationController alloc]
+        initWithRootViewController:[[HomeViewController alloc] init]];
+    nav.navigationBarHidden = YES;
+    self.window.rootViewController = nav;
     [self.window makeKeyAndVisible];
     return YES;
 }

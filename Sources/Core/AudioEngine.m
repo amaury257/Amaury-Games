@@ -21,6 +21,7 @@
 }
 
 - (void)dealloc {
+    [_engine stop];   // garante que o callback não roda mais antes de liberar _tmp
     free(_tmp);
 }
 

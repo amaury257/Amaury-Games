@@ -96,11 +96,16 @@ void rr_mundo_gerar_secao(rr_jogo *j) {
         case RR_TILE_RETO_ESTREITO: b.meia = estreita; break;
         case RR_TILE_CURVA_E: b.centro -= 12.0f + (float)((v >> 8) % 10); break;
         case RR_TILE_CURVA_D: b.centro += 12.0f + (float)((v >> 8) % 10); break;
-        case RR_TILE_ILHA:
+        case RR_TILE_ILHA: {
             if (b.meia < 44.0f) b.meia = 44.0f;
             ilha = 8.0f + (float)(v % 5) + 0.5f * (float)d;
-            if (ilha > b.meia - 14.0f) ilha = b.meia - 14.0f;
+            // garante passagem ≥ 14 px de cada lado em TODA a peça: o canal
+            // interpola de a.meia para b.meia, então o gargalo é o menor deles
+            float menor = a.meia < b.meia ? a.meia : b.meia;
+            if (ilha > menor - 14.0f) ilha = menor - 14.0f;
+            if (ilha < 0.0f) ilha = 0.0f;
             break;
+        }
         case RR_TILE_SEVERO: b.meia = clampf(22.0f - 0.4f * (float)d, 15.0f, 22.0f); break;
         case RR_TILE_DEPOSITOS: if (b.meia < 40.0f) b.meia = 40.0f; break;
         case RR_TILE_PONTE: b.centro = 80.0f; b.meia = 40.0f; break;

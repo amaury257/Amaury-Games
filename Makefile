@@ -24,13 +24,17 @@ include $(THEOS)/makefiles/application.mk
 
 APP_STAGE_DIR = $(THEOS_STAGING_DIR)/Applications/$(APPLICATION_NAME).app
 
+# Toolchain/SDK detectados sem depender de variáveis internas do Theos
+RR_CLANG := $(shell ls "$(THEOS)/toolchain/linux/iphone/bin/clang" 2>/dev/null || command -v clang)
+RR_SDK   := $(shell ls -d "$(THEOS)"/sdks/iPhoneOS*.sdk 2>/dev/null | sort -V | tail -n1)
+
 # Fase 0 — compila a dylib dummy e a embarca em Frameworks/ para o teste de
 # dlopen no aparelho (decide D3-A vs D3-B). A assinatura local via ldid é
 # opcional: o AltStore reassina o app e os frameworks embarcados na instalação.
 after-stage::
 	@mkdir -p "$(APP_STAGE_DIR)/Frameworks"
-	$(TARGET_CC) -dynamiclib -arch arm64 -isysroot "$(SYSROOT)" \
-		-miphoneos-version-min=26.0 \
+	"$(RR_CLANG)" -target arm64-apple-ios26.0 -isysroot "$(RR_SDK)" \
+		-dynamiclib \
 		-install_name @rpath/libdummy.dylib \
 		-o "$(APP_STAGE_DIR)/Frameworks/libdummy.dylib" \
 		Sources/Fase0/dummy.c

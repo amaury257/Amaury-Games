@@ -30,7 +30,7 @@
     EmuLoop *_loop;
     RRMetalView *_telaMetal;
     NSTimer *_timerUI;
-    BOOL _pausado, _fimTratado;
+    BOOL _pausado, _fimTratado, _encerrado;
     UIView *_overlayPausa, *_overlayFim;
     CHHapticEngine *_haptics;
     NSMutableString *_nomeRecorde;
@@ -146,7 +146,8 @@
             self->_telaMetal.transform = CGAffineTransformIdentity;
             self->_telaMetal.alpha = 1.0;
         } completion:^(BOOL fim) {
-            [self->_loop iniciar];
+            // se o usuário saiu durante a animação, não iniciar o loop órfão
+            if (!self->_encerrado) [self->_loop iniciar];
         }];
 }
 
@@ -160,6 +161,7 @@
 }
 
 - (void)encerrar {
+    _encerrado = YES;
     [_timerUI invalidate];
     _timerUI = nil;
     [_loop parar];

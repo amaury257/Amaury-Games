@@ -48,9 +48,23 @@ Todas as mudanças relevantes do projeto, em pt-BR. Formato livre inspirado no
   10.000, round-trip de save state (hash de framebuffer) e de recordes,
   seed do Diário. Soak de 10 min simulados com ASan/UBSan limpo (85 seções).
 
+### Corrigido (revisão completa de código)
+- Mundo: ilha logo após trecho estreito podia deixar passagem menor que o
+  jato (morte inevitável em seções difíceis) — o limite da ilha agora usa a
+  menor largura do canal ao longo de toda a peça (passagem mínima de 14 px).
+- Makefile: a regra da dylib dummy dependia de variáveis internas do Theos
+  (`TARGET_CC`/`SYSROOT`); agora detecta clang e SDK explicitamente.
+- AudioEngine: `dealloc` liberava o buffer sem parar o engine antes
+  (use-after-free potencial no callback de áudio).
+- JogoViewController: sair da tela durante a animação de power-on iniciava o
+  loop de emulação órfão (vazamento de thread permanente).
+- Revisão validada: 34 testes verdes, soak de 10 min com ASan/UBSan limpo,
+  passe estrito `-Wconversion` sem avisos no motor.
+
 ### Pendente
 - Rodar `scripts/fase0-gate.sh` no WSL2 (D3/dlopen ainda sem veredito) e
   smoke test da Fase 1 no iPhone: 60 fps, áudio sem estalos, modo avião.
+  **Roteiro completo em `docs/proximos-passos.md`.**
 - Tutorial de 1 tela, Configurações, tilt opcional e tipografia própria.
 
 ## Fase 0 — scaffold

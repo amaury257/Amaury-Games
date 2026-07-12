@@ -1,0 +1,22 @@
+{
+  "name": "Amaury Games",
+  "identifier": "com.amaury.games.source",
+  "sourceURL": "https://raw.githubusercontent.com/amaury257/Amaury-Games/claude/claude-md-docs-1fubba/pages/apps.json",
+  "apps": [
+    {
+      "name": "River Raid",
+      "bundleIdentifier": "com.amaury.riverraid",
+      "developerName": "amaury257",
+      "subtitle": "Arcade pessoal offline — Fase 1",
+      "version": "0.1.1",
+      "versionDate": "2026-07-12",
+      "versionDescription": "Build automática 1.",
+      "downloadURL": "https://raw.githubusercontent.com/amaury257/Amaury-Games/claude/claude-md-docs-1fubba/pages/RiverRaid.ipa",
+      "localizedDescription": "Recriação fiel das mecânicas do clássico de 1982 com assets 100% próprios: mundo determinístico, acelerador no manche, pontes-checkpoint, recordes locais e modo Desafio Diário. Offline absoluto. Futuro: emulador Atari 2600 e SNES no mesmo app.",
+      "iconURL": "https://raw.githubusercontent.com/amaury257/Amaury-Games/claude/claude-md-docs-1fubba/assets/icone.png",
+      "tintColor": "33F266",
+      "size": 56081,
+      "screenshotURLs": []
+    }
+  ]
+}

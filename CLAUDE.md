@@ -81,7 +81,9 @@ Constantes de gameplay centralizadas em `Sources/Game/engine/rr_tuning.h` (defau
 
 ## Build e deploy
 
-**Importante:** o build só fecha no WSL2 do usuário (Theos + SDK iOS). Ambientes remotos/CI sem Theos não compilam o app — neste caso, valide o que der (ex.: `bash -n` nos scripts) e descreva o smoke test para o usuário rodar.
+**Pipeline primário (ADR 0003, herdado do photovault do usuário):** GitHub Actions → runner macOS → XcodeGen (`project.yml`) → `xcodebuild` sem assinatura → `.ipa` → source do AltStore (`pages/apps.json`, link raw) + Release `latest` + artefato. Workflow: `.github/workflows/build-ipa.yml`, dispara em push (`main` e `claude/**`); o job de build só roda se os testes do motor passarem no Linux. O CI commita `pages/` no próprio branch com `[skip ci]` — **rode `git pull --rebase` antes de push**. Monitorar/corrigir builds pelo próprio CI (logs do xcodebuild) — é o único lugar onde o ObjC compila de verdade.
+
+**Caminho alternativo local:** Theos/WSL2 (Makefile; docs/build.md). O teste de dlopen do Diagnóstico aceita `Fase0Dummy.framework` (Xcode) ou `libdummy.dylib` (Theos).
 
 - **Testes do motor (rodam em qualquer host, sem Theos): `./scripts/rodar-testes.sh`** — golden LFSR/mapa, combustível, colisão, vida extra, save state, recordes. Rodar sempre que tocar em `Sources/Game/engine/`.
 - Gate completo da Fase 0: `./scripts/fase0-gate.sh` (verifica Theos/SDK, probe Swift, build, `.ipa`, grava `docs/fase0-resultados.md`).

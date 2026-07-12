@@ -1,0 +1,138 @@
+# Pipeline principal do projeto (ADR 0003, herdado do photovault):
+# 1) roda os testes do motor (Linux), 2) compila o .ipa NÃO assinado num
+# runner macOS (Xcode + XcodeGen), 3) publica pages/apps.json (source do
+# AltStore em link direto via raw.githubusercontent) + Release + artefato.
+#
+# No iPhone: AltStore → Sources → adicionar a URL do apps.json → instalar
+# "River Raid". Atualizações aparecem no AltStore a cada push.
+
+name: Build IPA (não assinado)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master, "claude/**" ]
+
+permissions:
+  contents: write
+
+jobs:
+  testes:
+    name: Testes do motor (host Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rodar testes (§7.13)
+        run: ./scripts/rodar-testes.sh
+
+  build:
+    name: Compilar e publicar .ipa
+    needs: testes
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER_REPO: ${{ github.repository }}
+      REF_NAME: ${{ github.ref_name }}
+      VERSION: 0.1.${{ github.run_number }}
+      BUILD_NUM: ${{ github.run_number }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Selecionar o Xcode mais recente
+        run: |
+          XC="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n 1)"
+          if [ -n "$XC" ]; then sudo xcode-select -s "$XC"; fi
+          xcodebuild -version
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Gerar o projeto Xcode
+        run: xcodegen generate
+
+      - name: Versão dinâmica no Info.plist
+        run: |
+          plutil -replace CFBundleShortVersionString -string "${VERSION}" Resources/Info.plist
+          plutil -replace CFBundleVersion -string "${BUILD_NUM}" Resources/Info.plist
+
+      - name: Compilar (archive sem assinatura)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project RiverRaid.xcodeproj \
+            -scheme RiverRaid \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/RiverRaid.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Empacotar .ipa
+        run: |
+          set -euo pipefail
+          APP_PATH="$(ls -d build/RiverRaid.xcarchive/Products/Applications/*.app | head -n 1)"
+          test -d "$APP_PATH/Frameworks/Fase0Dummy.framework" \
+            || echo "AVISO: Fase0Dummy.framework ausente — teste de dlopen (D3) vai falhar"
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          (cd build && zip -qry RiverRaid.ipa Payload)
+          rm -rf build/Payload
+
+      - name: Gerar pages/ (source do AltStore em link direto)
+        run: |
+          set -euo pipefail
+          mkdir -p pages
+          cp build/RiverRaid.ipa pages/RiverRaid.ipa
+          SIZE=$(stat -f%z build/RiverRaid.ipa)
+          DATE=$(date +%Y-%m-%d)
+          RAW="https://raw.githubusercontent.com/${OWNER_REPO}/${REF_NAME}/pages"
+          ICON="https://raw.githubusercontent.com/${OWNER_REPO}/${REF_NAME}/assets/icone.png"
+          cat > pages/apps.json <<EOF
+          {
+            "name": "Amaury Games",
+            "identifier": "com.amaury.games.source",
+            "sourceURL": "${RAW}/apps.json",
+            "apps": [
+              {
+                "name": "River Raid",
+                "bundleIdentifier": "com.amaury.riverraid",
+                "developerName": "amaury257",
+                "subtitle": "Arcade pessoal offline — Fase 1",
+                "version": "${VERSION}",
+                "versionDate": "${DATE}",
+                "versionDescription": "Build automática ${BUILD_NUM}.",
+                "downloadURL": "${RAW}/RiverRaid.ipa",
+                "localizedDescription": "Recriação fiel das mecânicas do clássico de 1982 com assets 100% próprios: mundo determinístico, acelerador no manche, pontes-checkpoint, recordes locais e modo Desafio Diário. Offline absoluto. Futuro: emulador Atari 2600 e SNES no mesmo app.",
+                "iconURL": "${ICON}",
+                "tintColor": "33F266",
+                "size": ${SIZE},
+                "screenshotURLs": []
+              }
+            ]
+          }
+          EOF
+          echo "pages/apps.json gerado (size=${SIZE}, version=${VERSION})"
+
+      - name: Commitar pages/ e atualizar a Release
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f pages/apps.json pages/RiverRaid.ipa
+          git commit -m "chore: publica River Raid na source do AltStore [skip ci]" || echo "sem mudanca"
+          git pull --rebase origin "${REF_NAME}" || true
+          git push origin "HEAD:${REF_NAME}"
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest build/RiverRaid.ipa \
+            --title "River Raid — última build (${VERSION})" \
+            --notes "Build ${BUILD_NUM} (Fase 1). Instale via AltStore."
+
+      - name: Publicar artefato (.ipa para download direto)
+        uses: actions/upload-artifact@v4
+        with:
+          name: RiverRaid-ipa
+          path: build/RiverRaid.ipa
+          if-no-files-found: error

@@ -1,0 +1,73 @@
+# project.yml — XcodeGen para gerar o RiverRaid.xcodeproj (pipeline photovault).
+#
+# Build primário do projeto: GitHub Actions (runner macOS) → xcodebuild SEM
+# assinatura → .ipa → source do AltStore em pages/ (ADR 0003).
+# O caminho Theos/WSL2 (Makefile) permanece como alternativa local.
+#
+# Uso em um Mac:  brew install xcodegen && xcodegen generate && ./scripts/build-ipa-xcode.sh
+
+name: RiverRaid
+
+options:
+  bundleIdPrefix: com.amaury
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CLANG_ENABLE_OBJC_ARC: "YES"
+    GCC_C_LANGUAGE_STANDARD: c11
+    # Sem assinatura: o AltStore reassina (app + frameworks) na instalação.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: ""
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  # Framework dummy da Fase 0: continua provando que frameworks embarcados
+  # sobrevivem à reassinatura do AltStore e carregam via dlopen (D3 — o mesmo
+  # mecanismo que os cores libretro usarão nas Fases 3–4).
+  Fase0Dummy:
+    type: framework
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Sources/Fase0
+    settings:
+      base:
+        PRODUCT_NAME: Fase0Dummy
+        PRODUCT_BUNDLE_IDENTIFIER: com.amaury.riverraid.fase0dummy
+        GENERATE_INFOPLIST_FILE: "YES"
+        SKIP_INSTALL: "YES"
+
+  RiverRaid:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Sources
+        excludes:
+          - "Fase0/**"            # vira o framework Fase0Dummy
+      - path: Resources/Assets.xcassets
+    dependencies:
+      - target: Fase0Dummy
+        embed: true
+        codeSign: false
+    settings:
+      base:
+        PRODUCT_NAME: RiverRaid
+        PRODUCT_BUNDLE_IDENTIFIER: com.amaury.riverraid
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/Sources/App"
+          - "$(SRCROOT)/Sources/Core"
+          - "$(SRCROOT)/Sources/Game"
+          - "$(SRCROOT)/Sources/Game/engine"
+          - "$(SRCROOT)/Sources/Shell"

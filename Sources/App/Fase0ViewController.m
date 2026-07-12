@@ -69,16 +69,24 @@ static UIColor *CorAmbar(void)   { return [UIColor colorWithRed:0.98 green:0.72 
     [self.navigationController popViewControllerAnimated:YES];
 }
 
-// Tenta carregar Frameworks/libdummy.dylib e chamar fase0_mensagem().
+// Tenta carregar a dylib/framework dummy embarcada e chamar fase0_mensagem().
 // Sucesso prova que o AltStore reassinou o framework embarcado e que o
 // mecanismo de carregamento dinâmico dos cores libretro (D3-A) funciona.
+// Candidatos: libdummy.dylib (build Theos) ou Fase0Dummy.framework (build Xcode/CI).
 - (NSString *)executarTesteDlopenComResultado:(BOOL *)ok {
     *ok = NO;
-    NSString *caminho = [NSBundle.mainBundle.privateFrameworksPath
-                         stringByAppendingPathComponent:@"libdummy.dylib"];
-
-    if (![NSFileManager.defaultManager fileExistsAtPath:caminho]) {
-        return [NSString stringWithFormat:@"dylib ausente do bundle:\n%@", caminho];
+    NSString *frameworks = NSBundle.mainBundle.privateFrameworksPath;
+    NSArray<NSString *> *candidatos = @[
+        [frameworks stringByAppendingPathComponent:@"Fase0Dummy.framework/Fase0Dummy"],
+        [frameworks stringByAppendingPathComponent:@"libdummy.dylib"],
+    ];
+    NSString *caminho = nil;
+    for (NSString *c in candidatos) {
+        if ([NSFileManager.defaultManager fileExistsAtPath:c]) { caminho = c; break; }
+    }
+    if (!caminho) {
+        return [NSString stringWithFormat:@"dylib/framework dummy ausente do bundle:\n%@",
+                frameworks];
     }
 
     void *handle = dlopen(caminho.fileSystemRepresentation, RTLD_NOW);

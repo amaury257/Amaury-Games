@@ -4,6 +4,23 @@ Todas as mudanças relevantes do projeto, em pt-BR. Formato livre inspirado no
 [Keep a Changelog](https://keepachangelog.com/pt-BR/); fases conforme §13 do
 `docs/prompt-mestre.md`.
 
+## [Não lançado] — Pipeline de build via GitHub Actions (ADR 0003)
+
+### Adicionado
+- Pipeline do photovault replicado: `project.yml` (XcodeGen, app RiverRaid +
+  framework Fase0Dummy embarcado) e `.github/workflows/build-ipa.yml`
+  (testes no Linux → archive sem assinatura no macOS → `.ipa` → source do
+  AltStore em `pages/apps.json` + Release `latest` + artefato).
+- Ícone próprio gerado por script (`scripts/gerar-icone.py` → `assets/icone.png`
+  e `Resources/Assets.xcassets`), arte pixel original (jato sobre o rio).
+- Diagnóstico (dlopen/D3) aceita `Fase0Dummy.framework` (Xcode) ou
+  `libdummy.dylib` (Theos).
+
+### Mudado
+- **WSL2/Theos deixa de ser pré-requisito** — vira caminho alternativo local.
+  Instalação passa a ser OTA pela source do AltStore (`docs/proximos-passos.md`
+  reescrito). Deployment target do build Xcode: iOS 16.
+
 ## [Não lançado] — Fase 1 implementada (validação no aparelho pendente)
 
 > Estratégia acordada com o usuário: desenvolver adiantado no ambiente remoto

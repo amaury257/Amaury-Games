@@ -1,0 +1,8 @@
+Package: com.amaury.riverraid
+Name: River Raid
+Version: 0.0.1
+Architecture: iphoneos-arm64
+Description: River Raid + emulador retro multi-sistema. App pessoal, offline absoluto (Fase 0).
+Maintainer: Amaury
+Author: Amaury
+Section: Applications

@@ -6,15 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado do repositório
 
-O repositório está **em fase de bootstrap**: ainda não há código. A fonte de verdade completa do projeto é **`docs/prompt-mestre.md`** (Prompt Mestre v2.0) — leia-o antes de qualquer decisão estrutural. Este CLAUDE.md destila o essencial; em caso de dúvida ou conflito, o prompt mestre prevalece.
+**Fase 0 (gate de toolchain) em andamento.** O scaffold Theos, o app "Olá" (ObjC) com teste de dlopen e os scripts do gate estão prontos; falta o usuário rodar `scripts/fase0-gate.sh` no WSL2, instalar o `.ipa` via AltStore e reportar os resultados — isso fecha os ADRs 0001 (D3) e 0002 (D7) e libera a Fase 1. A fonte de verdade completa do projeto é **`docs/prompt-mestre.md`** (Prompt Mestre v2.0) — leia-o antes de qualquer decisão estrutural. Este CLAUDE.md destila o essencial; em caso de dúvida ou conflito, o prompt mestre prevalece. **Nada de features antes de a Fase 0 fechar.**
 
-**Nada de features antes da Fase 0** (gate de toolchain, ver "Fases" abaixo). Antes de escrever qualquer código, as perguntas obrigatórias do §15 do prompt mestre devem ser respondidas pelo usuário:
-1. Saída de `ls $THEOS/sdks` (qual SDK iOS está disponível).
-2. Se a toolchain Swift-para-iOS está instalada no Theos/WSL2.
-3. Modelo do iPhone (ProMotion/haptics).
-4. Manche virtual fixo ou flutuante.
+Respostas do §15 (já coletadas do usuário — não perguntar de novo):
+1. SDK iOS: desconhecido — o gate detecta (`Makefile` usa `latest`); resultado vai para `docs/fase0-resultados.md`.
+2. Toolchain Swift: desconhecida — `scripts/probe-swift.sh` testa empiricamente (D7).
+3. iPhone: **iPhone 14** (tela 60 Hz, sem ProMotion; Core Haptics disponível).
+4. Manche virtual: **flutuante** (aparece onde tocar).
 
-Campos a preencher: bundle ID (sugestão `com.amaury.riverraid`), SDK disponível, nome de exibição (padrão "River Raid").
+Campos preenchidos: bundle ID `com.amaury.riverraid`; nome de exibição "River Raid".
 
 ## Visão do produto
 
@@ -73,13 +73,16 @@ RiverRaid/
 
 Constantes de gameplay centralizadas em `GameTuning.swift` (defaults tunáveis). Layout de dados do emulador: `Documents/roms/<sistema>/` e `Documents/saves/<sistema>/<sha1-da-rom>/` — identidade de ROM por SHA-1.
 
-## Build e deploy (workflow previsto — scripts ainda serão criados)
+## Build e deploy
 
-- `scripts/build-cores.sh` compila os submódulos libretro antes do app (clang+SDK do Theos, `-miphoneos-version-min=26.0`, arm64) e copia os frameworks; flags exatas documentadas em `docs/cores.md`.
-- `make package FINALPACKAGE=1` → `scripts/package-ipa.sh` monta `Payload/RiverRaid.app` → zip → `.ipa`.
+**Importante:** o build só fecha no WSL2 do usuário (Theos + SDK iOS). Ambientes remotos/CI sem Theos não compilam o app — neste caso, valide o que der (ex.: `bash -n` nos scripts) e descreva o smoke test para o usuário rodar.
+
+- Gate completo da Fase 0: `./scripts/fase0-gate.sh` (verifica Theos/SDK, probe Swift, build, `.ipa`, grava `docs/fase0-resultados.md`).
+- Build manual: `make package FINALPACKAGE=1` → `./scripts/package-ipa.sh` gera `build/RiverRaid.ipa`.
+- Makefile: template **application** do Theos; `TARGET := iphone:clang:latest:26.0`; `ARCHS := arm64`. O Info.plist vive em `Resources/Info.plist` (convenção do Theos; o §10 citava `RiverRaid.plist` na raiz). Frameworks adicionais (Metal, MetalKit, AVFoundation, GameController, CoreHaptics) entram nas fases seguintes.
+- `scripts/build-cores.sh` (Fase 3) compilará os submódulos libretro antes do app (clang+SDK do Theos, `-miphoneos-version-min=26.0`, arm64); flags exatas irão para `docs/cores.md`.
 - Instalação: AltStore reassina o `.ipa` (app + frameworks embarcados) com o Apple ID do usuário. Entitlements mínimos.
-- Makefile: template **application** do Theos; `TARGET := iphone:clang:<<SDK>>:26.0`; `ARCHS := arm64`; frameworks Metal, MetalKit, AVFoundation, GameController, CoreHaptics, UIKit/SwiftUI.
-- Troubleshooting vai em `docs/build.md` (§11.5).
+- Instalação do Theos/SDK e troubleshooting: `docs/build.md`.
 
 ## Fases e Definition of Done (§13)
 

@@ -2,7 +2,17 @@
 #import <GameController/GameController.h>
 #import <os/lock.h>
 
-static const CGFloat kRaioManche = 44.0;   // alcance do manche em pontos
+// Alcance do manche em pontos: quanto maior, mais percurso o dedo precisa
+// fazer para saturar o eixo — evita que um toque pequeno já jogue o eixo
+// no máximo (relato de "muito sensível, exagera o movimento").
+static const CGFloat kRaioManche = 60.0;
+
+// Curva de resposta: suave perto do centro, cheia na borda (sign(v) * v²).
+// Não é inércia (o jato continua respondendo no mesmo quadro, §7.3) — só
+// torna o mapeamento toque→eixo menos brusco para deslocamentos pequenos.
+static CGFloat rr_curva_resposta(CGFloat v) {
+    return (v < 0 ? -1.0 : 1.0) * (v * v);
+}
 
 @implementation InputHub {
     os_unfair_lock _trava;
@@ -97,8 +107,8 @@ static const CGFloat kRaioManche = 44.0;   // alcance do manche em pontos
     dx = MAX(-1.0, MIN(1.0, dx));
     dy = MAX(-1.0, MIN(1.0, dy));
     os_unfair_lock_lock(&_trava);
-    _eixoX = (float)dx;
-    _eixoY = (float)-dy;   // tela: y cresce para baixo; manche: cima = acelera
+    _eixoX = (float)rr_curva_resposta(dx);
+    _eixoY = (float)-rr_curva_resposta(dy);   // tela: y cresce para baixo; manche: cima = acelera
     os_unfair_lock_unlock(&_trava);
     [CATransaction begin];
     [CATransaction setDisableActions:YES];

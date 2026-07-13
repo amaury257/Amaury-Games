@@ -4,6 +4,27 @@ Todas as mudanças relevantes do projeto, em pt-BR. Formato livre inspirado no
 [Keep a Changelog](https://keepachangelog.com/pt-BR/); fases conforme §13 do
 `docs/prompt-mestre.md`.
 
+## [Não lançado] — Primeiro teste no aparelho + ajustes de tuning
+
+### Confirmado
+- **D3 (ADR 0001) aceito**: dlopen de frameworks embarcados sobrevive à
+  reassinatura da AltStore Classic — testado no iPhone 14 do usuário,
+  Diagnóstico mostrou verde. Fase 3 (cores libretro) liberada.
+- Pipeline GitHub Actions → AltStore validado ponta a ponta: build, source
+  (`pages/apps.json`), instalação via AltServer (Classic, região BR — PAL
+  indisponível fora da UE).
+
+### Ajustado (relato do usuário no aparelho)
+- `Sources/Core/InputHub.m`: manche flutuante exagerava o movimento —
+  aumentado o raio de saturação (44pt → 60pt) e adicionada curva de resposta
+  suave perto do centro (`sign(v)·v²`), cheia na borda. Não introduz inércia
+  (§7.3 continua respeitado: resposta no mesmo quadro).
+- `Sources/Game/engine/rr_tuning.h`: velocidade rápida demais mesmo em
+  cruzeiro — `RR_VEL_BASE` 1.25 → 0.95, `RR_VEL_LATERAL` 1.6 → 1.3.
+
+### Pendente
+- Novo teste no aparelho para validar os ajustes de tuning acima.
+
 ## [Não lançado] — Pipeline de build via GitHub Actions (ADR 0003)
 
 ### Adicionado

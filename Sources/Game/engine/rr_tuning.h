@@ -22,10 +22,12 @@
 #define RR_JATO_MUNDO_DY  ((float)(RR_ALTURA_JOGO - 1 - RR_JATO_Y) - RR_JATO_ALT * 0.5f)
 
 // Movimento (§7.3): manche vertical = acelerador; lateral sem inércia
-#define RR_VEL_BASE       1.25f               // rolagem px/frame em cruzeiro
+// Valores ajustados após teste no aparelho (relato: rolagem rápida demais,
+// manche lateral exagerado — ver docs/CHANGELOG.md).
+#define RR_VEL_BASE       0.95f               // rolagem px/frame em cruzeiro
 #define RR_ACEL_MIN       0.5f
 #define RR_ACEL_MAX       2.0f
-#define RR_VEL_LATERAL    1.6f
+#define RR_VEL_LATERAL    1.3f
 
 // Tiro (§7.3): cadência fixa, míssil herda a velocidade do jato
 #define RR_MAX_MISSEIS    2

@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado do repositório
 
-**Fase 1 implementada em código; validação no aparelho pendente.** Estratégia acordada com o usuário: desenvolver adiantado neste ambiente (sem Theos) e validar depois no WSL2 + iPhone via AltStore. Consequências práticas:
+**Fase 1 validada no aparelho real (iPhone 14 do usuário) via AltStore Classic + AltServer.** O build sai do GitHub Actions (ADR 0003), não do Theos/WSL2 — esse caminho local ficou como alternativa.
 
-- **D7 decidido: ObjC/UIKit + C** (ADR 0002) — único caminho garantido no Theos sem o probe Swift. Não escrever Swift.
-- O **gate da Fase 0 nunca rodou** (`scripts/fase0-gate.sh`): D3 (dlopen pós-reassinatura) segue sem veredito — o app inclui a tela Diagnóstico que mostra esse teste. Antes da Fase 3 (cores libretro), D3 PRECISA estar confirmado.
-- O jogo (motor C + Core + Shell) está completo conforme §7, com testes verdes no host; falta o smoke test real (60 fps, áudio, modo avião) no iPhone.
+- **D7 decidido: ObjC/UIKit + C** (ADR 0002) — único caminho garantido sem o probe Swift. Não escrever Swift.
+- **D3 CONFIRMADO (ADR 0001, 2026-07-13): dlopen de frameworks embarcados funciona pós-reassinatura da AltStore.** A tela Diagnóstico mostrou verde no aparelho. Fase 3 (cores libretro) está liberada tecnicamente.
+- O usuário está na **AltStore Classic** (não PAL — PAL exige Apple ID de região UE, indisponível no Brasil). Instalação/atualização passa por AltServer aberto no Windows + iPhone no mesmo Wi-Fi/cabo; as sources (`pages/apps.json` deste repo e do photovault) foram registradas na aba Sources para evitar `.ipa` manual.
+- Jogo testado no aparelho: **ajustes de tuning em andamento** (ver rr_tuning.h) — manche flutuante estava exagerando o movimento (curva de resposta + raio maiores em InputHub.m) e a velocidade base estava rápida demais (RR_VEL_BASE reduzido). Reavaliar após o usuário testar o novo build.
 
 A fonte de verdade completa do projeto é **`docs/prompt-mestre.md`** (Prompt Mestre v2.0) — leia-o antes de qualquer decisão estrutural. Este CLAUDE.md destila o essencial; em caso de dúvida ou conflito, o prompt mestre prevalece (exceto onde um ADR registrou desvio consciente).
 

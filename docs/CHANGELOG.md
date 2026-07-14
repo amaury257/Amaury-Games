@@ -4,6 +4,29 @@ Todas as mudanças relevantes do projeto, em pt-BR. Formato livre inspirado no
 [Keep a Changelog](https://keepachangelog.com/pt-BR/); fases conforme §13 do
 `docs/prompt-mestre.md`.
 
+## [Não lançado] — Manche lateral reescrito para arraste relativo
+
+### Ajustado (2º relato do usuário: "tenho que ficar raspando o dedo pra ele obedecer")
+- O manche flutuante usava um modelo de **deflexão** (offset fixo a partir da
+  origem do toque, com curva suave) — dedo parado a certa distância do
+  centro continuava empurrando o jato indefinidamente, e a curva do ajuste
+  anterior tornou isso ainda mais "mole" perto do centro. Não era o modelo
+  certo para o que o usuário queria.
+- `Sources/Core/InputHub.m`: eixo X (lateral) reescrito para **arraste
+  relativo** — dedo parado = jato parado; mover o dedo N pontos move o jato
+  proporcionalmente a N, sem curva, sem precisar reiniciar o gesto. Nova
+  constante `kPontosParaEixoCheio` (10pt) controla a sensibilidade; trava de
+  segurança em ±4 evita teleporte num flick muito rápido. O eixo Y
+  (acelerador) permanece por deflexão a partir da origem, linear — é o
+  modelo certo para "segurar pra acelerar" do §7.3.
+- Curva de resposta (`rr_curva_resposta`) removida — não fazia sentido no
+  novo modelo de arraste.
+
+### Pendente
+- Validar a sensibilidade (`kPontosParaEixoCheio`) no aparelho — ainda não
+  testada fisicamente; é o primeiro palpite, deve precisar de 1 rodada de
+  ajuste fino como a velocidade base precisou.
+
 ## [Não lançado] — Primeiro teste no aparelho + ajustes de tuning
 
 ### Confirmado

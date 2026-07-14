@@ -2,25 +2,27 @@
 #import <GameController/GameController.h>
 #import <os/lock.h>
 
-// Alcance do manche em pontos: quanto maior, mais percurso o dedo precisa
-// fazer para saturar o eixo — evita que um toque pequeno já jogue o eixo
-// no máximo (relato de "muito sensível, exagera o movimento").
+// Raio do manche em pontos: usado para o eixo Y (acelerador — deflexão a
+// partir da origem, §7.3) e como limite visual do manche na tela.
 static const CGFloat kRaioManche = 60.0;
 
-// Curva de resposta: suave perto do centro, cheia na borda (sign(v) * v²).
-// Não é inércia (o jato continua respondendo no mesmo quadro, §7.3) — só
-// torna o mapeamento toque→eixo menos brusco para deslocamentos pequenos.
-static CGFloat rr_curva_resposta(CGFloat v) {
-    return (v < 0 ? -1.0 : 1.0) * (v * v);
-}
+// Eixo X (lateral): ARRASTE RELATIVO, não deflexão. Dedo parado = jato
+// parado; mover o dedo N pontos move o jato proporcionalmente a N — sem
+// "segurar" uma velocidade enquanto o dedo fica afastado do centro (relato
+// do usuário: precisava ficar raspando a tela pra obedecer). Este valor é
+// quantos pontos de arraste equivalem a um eixo_x "cheio" (1.0) por amostra
+// de toque; ainda não validado no aparelho — ajustar após teste de feel.
+static const CGFloat kPontosParaEixoCheio = 10.0;
 
 @implementation InputHub {
     os_unfair_lock _trava;
-    float _eixoX, _eixoY;
+    float _eixoY;
+    float _deltaXAcumulado;   // arraste lateral acumulado desde a última leitura
     BOOL _fogo;
 
     UITouch *_toqueManche;
     CGPoint _origemManche;
+    CGFloat _ultimoToqueX;
     UITouch *_toqueFogo;
 
     CAShapeLayer *_base, *_topo;    // manche flutuante
@@ -84,6 +86,7 @@ static CGFloat rr_curva_resposta(CGFloat v) {
         if (p.x < self.bounds.size.width * 0.5 && !_toqueManche) {
             _toqueManche = t;
             _origemManche = p;
+            _ultimoToqueX = p.x;
             [CATransaction begin];
             [CATransaction setDisableActions:YES];
             _base.position = p; _topo.position = p;
@@ -102,17 +105,28 @@ static CGFloat rr_curva_resposta(CGFloat v) {
 - (void)touchesMoved:(NSSet<UITouch *> *)toques withEvent:(UIEvent *)evento {
     if (!_toqueManche || ![toques containsObject:_toqueManche]) return;
     CGPoint p = [_toqueManche locationInView:self];
-    CGFloat dx = (p.x - _origemManche.x) / kRaioManche;
+
+    // Eixo X: delta desde a última amostra (arraste relativo), com trava de
+    // segurança para não teleportar o jato num flick muito rápido.
+    CGFloat deltaX = p.x - _ultimoToqueX;
+    _ultimoToqueX = p.x;
+    CGFloat eixoXBruto = MAX(-4.0, MIN(4.0, deltaX / kPontosParaEixoCheio));
+
+    // Eixo Y: deflexão linear a partir da origem (acelerador, §7.3).
     CGFloat dy = (p.y - _origemManche.y) / kRaioManche;
-    dx = MAX(-1.0, MIN(1.0, dx));
     dy = MAX(-1.0, MIN(1.0, dy));
+
     os_unfair_lock_lock(&_trava);
-    _eixoX = (float)rr_curva_resposta(dx);
-    _eixoY = (float)-rr_curva_resposta(dy);   // tela: y cresce para baixo; manche: cima = acelera
+    _deltaXAcumulado += (float)eixoXBruto;
+    _eixoY = (float)-dy;   // tela: y cresce para baixo; manche: cima = acelera
     os_unfair_lock_unlock(&_trava);
+
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
-    _topo.position = CGPointMake(_origemManche.x + dx * kRaioManche,
+    // Visual do manche: acompanha o dedo, limitado ao raio (só estética —
+    // quem move o jato de fato é o delta acumulado acima, não esta posição).
+    CGFloat dxVisual = MAX(-1.0, MIN(1.0, (p.x - _origemManche.x) / kRaioManche));
+    _topo.position = CGPointMake(_origemManche.x + dxVisual * kRaioManche,
                                  _origemManche.y + dy * kRaioManche);
     [CATransaction commit];
 }
@@ -123,7 +137,8 @@ static CGFloat rr_curva_resposta(CGFloat v) {
             _toqueManche = nil;
             _base.hidden = _topo.hidden = YES;
             os_unfair_lock_lock(&_trava);
-            _eixoX = _eixoY = 0;
+            _deltaXAcumulado = 0;
+            _eixoY = 0;
             os_unfair_lock_unlock(&_trava);
         }
         if (t == _toqueFogo) {
@@ -159,7 +174,8 @@ static CGFloat rr_curva_resposta(CGFloat v) {
 - (RREstadoEntrada)estadoAtual {
     RREstadoEntrada e = {0};
     os_unfair_lock_lock(&_trava);
-    e.analogicoX = _eixoX;
+    e.analogicoX = _deltaXAcumulado;
+    _deltaXAcumulado = 0;   // consumido: cada quadro só aplica o arraste do intervalo
     e.analogicoY = _eixoY;
     if (_fogo) e.botoes |= RRBotaoFogo;
     os_unfair_lock_unlock(&_trava);
